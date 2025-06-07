@@ -1,1 +1,2 @@
 -e "node_modules/\n__pycache__/\n.env\n*.pyc\n*.log\ndist/\nbuild/" 
+".env" 
