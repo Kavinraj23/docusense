@@ -23,7 +23,7 @@ Required fields:
 - document_type: (string, e.g., Resume, Report, Legal Form, Article)
 - date: (string, if present in the document, else "Unknown")
 - summary: (2–4 sentence summary of the document)
-- tags: (list of relevant keywords or concepts. Please pick 5 of the best)
+- tags: (list of relevant keywords or concepts. Please pick up to 5 of the best)
 
 Document:
 {trimmed_text}
