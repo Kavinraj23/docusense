@@ -9,24 +9,52 @@ load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=api_key)
 
-def extract_metadata_with_gemini(document_text: str) -> dict:
+def extract_syllabus_info(document_text: str) -> dict:
     # Trim large documents to avoid exceeding token limits
-    trimmed_text = document_text[:8000]
+    max_token_length = 20000
+    trimmed_text = document_text[:max_token_length]
 
-    # Prompt for structured metadata in JSON
-    prompt = f"""
-You are a document parsing assistant. Extract metadata from the document below and return the output in **valid JSON format**, without markdown backticks or formatting.
+    prompt = f"""You are a syllabus parsing assistant. Extract metadata from the syllabus text below and return ONLY a valid JSON object. For any missing information, use empty strings or empty arrays. Do not include any explanatory text or markdown formatting in your response.
 
-Required fields:
-- title: (string)
-- author: (string, or "Unknown" if not found)
-- document_type: (string, e.g., Resume, Report, Legal Form, Article)
-- date: (string, if present in the document, else "Unknown")
-- summary: (2–4 sentence summary of the document)
-- tags: (list of relevant keywords or concepts. Please pick up to 5 of the best)
+Here is an example of the output format (replace with actual values from the input syllabus):
+{{
+  "course_code": "",
+  "course_name": "",
+  "instructor": {{
+    "name": "",
+    "email": ""
+  }},
+  "term": {{
+    "semester": "",
+    "year": ""
+  }},
+  "description": "",
+  "meeting_info": {{
+    "days": "",
+    "time": "",
+    "location": ""
+  }},
+  "important_dates": {{
+    "first_class": "",
+    "last_class": "",
+    "midterms": [],
+    "final_exam": "",
+  }},
+  "grading_policy": {{
+  }},
+  "schedule_summary": ""
+}}
 
-Document:
+INPUT SYLLABUS TEXT:
 {trimmed_text}
+
+Remember to:
+1. Return ONLY the JSON object
+2. Use actual values from the input text
+3. Use empty strings ("") for missing text fields
+4. Use empty arrays ([]) for missing lists
+5. Use empty objects ({{}}) for missing nested objects
+6. Do not include any explanatory text or markdown formatting
 """
 
     # Use Gemini 1.5 Flash

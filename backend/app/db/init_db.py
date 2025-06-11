@@ -1,5 +1,5 @@
 from app.db.session import engine, Base
-from app.db.models import *  # Import all models (including Document)
+from app.db.models import * 
 from sqlalchemy.exc import SQLAlchemyError
 
 def init_db():

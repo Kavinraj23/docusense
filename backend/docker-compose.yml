@@ -3,7 +3,7 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15
-    container_name: doclyze_postgres
+    container_name: studysnap_postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -11,8 +11,8 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - doclyze_pgdata:/var/lib/postgresql/data
+      - studysnap_pgdata:/var/lib/postgresql/data
     restart: unless-stopped
 
 volumes:
-  doclyze_pgdata:
+  studysnap_pgdata:

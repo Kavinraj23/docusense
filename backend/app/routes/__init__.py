@@ -1,1 +1,1 @@
-from app.routes.document import router as document_router
+from app.routes.syllabus import router as syllabus_router
