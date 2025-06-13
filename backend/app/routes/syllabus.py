@@ -26,7 +26,7 @@ def get_db():
 def is_allowed_file(filename: str) -> bool:
     return any(filename.endswith(ext) for ext in ACCEPTED_EXTENSIONS)
 
-@router.post("/upload/")
+@router.post("/upload")
 async def upload_syllabus(file: UploadFile = File(...), db: Session = Depends(get_db)):
     if not is_allowed_file(file.filename.lower()):
         raise HTTPException(
