@@ -13,12 +13,21 @@ from pydantic import BaseModel
 class ColorUpdate(BaseModel):
     accent_color: str
 
+class ImportantDates(BaseModel):
+    first_class: str
+    last_class: str
+    midterms: List[str]
+    final_exam: str
+
+class SyllabusUpdate(BaseModel):
+    important_dates: ImportantDates
+
 router = APIRouter()
 
 UPLOAD_DIR = 'uploads'
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-ACCEPTED_EXTENSIONS = {".pdf", ".docx", ".txt"}
+ACCEPTED_EXTENSIONS = {".pdf", ".docx" }
 
 def get_db():
     db = SessionLocal()
@@ -35,7 +44,7 @@ async def upload_syllabus(file: UploadFile = File(...), db: Session = Depends(ge
     if not is_allowed_file(file.filename.lower()):
         raise HTTPException(
             status_code=400,
-            detail="Only PDF, DOCX, and TXT files are allowed"
+            detail="Only PDF and DOCX and TXT files are allowed"
         )
 
     file_path = os.path.join(UPLOAD_DIR, file.filename)
@@ -158,5 +167,20 @@ def update_syllabus_color(syllabus_id: int, color_update: ColorUpdate, db: Sessi
         raise HTTPException(status_code=404, detail="Syllabus not found")
     
     syllabus.accent_color = color_update.accent_color
+    db.commit()
+    return {"status": "success"}
+
+@router.patch("/syllabi/{syllabus_id}")
+def update_syllabus_details(syllabus_id: int, syllabus_update: SyllabusUpdate, db: Session = Depends(get_db)):
+    syllabus = db.query(Syllabus).filter(Syllabus.id == syllabus_id).first()
+    if not syllabus:
+        raise HTTPException(status_code=404, detail="Syllabus not found")
+    
+    # Update important dates
+    syllabus.first_class = syllabus_update.important_dates.first_class
+    syllabus.last_class = syllabus_update.important_dates.last_class
+    syllabus.midterm_dates = json.dumps(syllabus_update.important_dates.midterms)
+    syllabus.final_exam_date = syllabus_update.important_dates.final_exam
+    
     db.commit()
     return {"status": "success"}

@@ -43,3 +43,7 @@ export const deleteSyllabus = async (id: number): Promise<void> => {
 export const updateSyllabusColor = async (id: number, color: AccentColor): Promise<void> => {
   await api.patch(`/syllabi/${id}/color`, { accent_color: color });
 };
+
+export const updateSyllabusDetails = async (id: number, updates: Partial<Syllabus>): Promise<void> => {
+  await api.patch(`/syllabi/${id}`, updates);
+};
