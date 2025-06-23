@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime, Text
 from datetime import datetime
-from app.db.session import Base
+from ..session import Base
 
 class Syllabus(Base):
     __tablename__ = "syllabi"

@@ -188,3 +188,6 @@ Werkzeug==3.0.4
 widgetsnbextension==4.0.13
 wsproto==1.2.0
 sqlalchemy==2.0.27
+# Authentication and Security
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4

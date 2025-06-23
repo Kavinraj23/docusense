@@ -9,6 +9,8 @@ from app.db.models.syllabus import Syllabus
 from app.services.gemini import extract_syllabus_info
 from app.services.extractor import extract_text
 from pydantic import BaseModel
+from app.services.security import get_current_user  # <-- Import the auth dependency
+from app.db.deps import get_db
 
 class ColorUpdate(BaseModel):
     accent_color: str
@@ -29,18 +31,15 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ACCEPTED_EXTENSIONS = {".pdf", ".docx" }
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 def is_allowed_file(filename: str) -> bool:
     return any(filename.endswith(ext) for ext in ACCEPTED_EXTENSIONS)
 
 @router.post("/upload")
-async def upload_syllabus(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_syllabus(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)  # <-- Require authentication
+):
     if not is_allowed_file(file.filename.lower()):
         raise HTTPException(
             status_code=400,
@@ -104,7 +103,10 @@ async def upload_syllabus(file: UploadFile = File(...), db: Session = Depends(ge
         raise HTTPException(status_code=500, detail=f"Error processing syllabus: {str(e)}")
 
 @router.get("/syllabi", response_model=List[dict])
-def list_syllabi(db: Session = Depends(get_db)):
+def list_syllabi(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)  # <-- Require authentication
+):
     syllabi = db.query(Syllabus).all()
     return [
         {
@@ -140,7 +142,11 @@ def list_syllabi(db: Session = Depends(get_db)):
     ]
 
 @router.delete("/syllabi/{syllabus_id}")
-def delete_syllabus(syllabus_id: int, db: Session = Depends(get_db)):
+def delete_syllabus(
+    syllabus_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)  # <-- Require authentication
+):
     syllabus = db.query(Syllabus).filter(Syllabus.id == syllabus_id).first()
     if not syllabus:
         raise HTTPException(status_code=404, detail="Syllabus not found")
@@ -161,7 +167,12 @@ def delete_syllabus(syllabus_id: int, db: Session = Depends(get_db)):
     return {"message": "Syllabus deleted successfully"}
 
 @router.patch("/syllabi/{syllabus_id}/color")
-def update_syllabus_color(syllabus_id: int, color_update: ColorUpdate, db: Session = Depends(get_db)):
+def update_syllabus_color(
+    syllabus_id: int,
+    color_update: ColorUpdate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)  # <-- Require authentication
+):
     syllabus = db.query(Syllabus).filter(Syllabus.id == syllabus_id).first()
     if not syllabus:
         raise HTTPException(status_code=404, detail="Syllabus not found")
@@ -171,7 +182,12 @@ def update_syllabus_color(syllabus_id: int, color_update: ColorUpdate, db: Sessi
     return {"status": "success"}
 
 @router.patch("/syllabi/{syllabus_id}")
-def update_syllabus_details(syllabus_id: int, syllabus_update: SyllabusUpdate, db: Session = Depends(get_db)):
+def update_syllabus_details(
+    syllabus_id: int,
+    syllabus_update: SyllabusUpdate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)  # <-- Require authentication
+):
     syllabus = db.query(Syllabus).filter(Syllabus.id == syllabus_id).first()
     if not syllabus:
         raise HTTPException(status_code=404, detail="Syllabus not found")

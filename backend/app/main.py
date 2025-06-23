@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import os
 
 from app.routes.syllabus import router as syllabus_router
+from app.routes.auth import router as auth_router  # Add auth router
 
 load_dotenv()
 app = FastAPI()
@@ -16,4 +17,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include routers
 app.include_router(syllabus_router)
+app.include_router(auth_router, prefix="/auth", tags=["auth"])  # Add auth routes
