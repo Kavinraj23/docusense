@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
 from ..session import Base
 
@@ -9,6 +10,9 @@ class Syllabus(Base):
     filename = Column(String, nullable=False)
     content_type = Column(String, nullable=False)
     upload_time = Column(DateTime, default=datetime.utcnow)   
+    
+    # Foreign key to User (UUID)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
     
     # Syllabus-specific fields
     course_code = Column(String, nullable=True)

@@ -12,6 +12,9 @@ from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
+from app.db.deps import get_db
+from app.db.models.user import User
+from sqlalchemy.orm import Session
 
 # Load environment variables
 load_dotenv()
@@ -83,14 +86,18 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
     """
     Get the current user from the token.
     This is a dependency that can be used to protect routes.
     Args:
         token: The JWT token from the request
+        db: The database session
     Returns:
-        TokenData: The decoded token data
+        User: The current user
     Raises:
         HTTPException: If the token is invalid
     """
@@ -100,12 +107,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        # Decode the JWT token
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         if email is None:
             raise credentials_exception
-        token_data = TokenData(email=email)
-        return token_data
     except JWTError:
         raise credentials_exception
+
+    user = db.query(User).filter(User.email == email).first()
+    if user is None:
+        raise credentials_exception
+    return user

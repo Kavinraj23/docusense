@@ -63,6 +63,7 @@ async def upload_syllabus(
         new_syllabus = Syllabus(
             filename=file.filename,
             content_type=file.content_type,
+            user_id=current_user.id,  # Add the current user's ID
             course_code=metadata.get("course_code"),
             course_name=metadata.get("course_name"),
             instructor_name=instructor_info.get("name"),
@@ -107,7 +108,8 @@ def list_syllabi(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)  # <-- Require authentication
 ):
-    syllabi = db.query(Syllabus).all()
+    # Only return syllabi belonging to the current user
+    syllabi = db.query(Syllabus).filter(Syllabus.user_id == current_user.id).all()
     return [
         {
             "id": syllabus.id,
@@ -147,7 +149,12 @@ def delete_syllabus(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)  # <-- Require authentication
 ):
-    syllabus = db.query(Syllabus).filter(Syllabus.id == syllabus_id).first()
+    # Only allow users to delete their own syllabi
+    syllabus = db.query(Syllabus).filter(
+        Syllabus.id == syllabus_id,
+        Syllabus.user_id == current_user.id
+    ).first()
+    
     if not syllabus:
         raise HTTPException(status_code=404, detail="Syllabus not found")
     
@@ -173,7 +180,12 @@ def update_syllabus_color(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)  # <-- Require authentication
 ):
-    syllabus = db.query(Syllabus).filter(Syllabus.id == syllabus_id).first()
+    # Only allow users to update their own syllabi
+    syllabus = db.query(Syllabus).filter(
+        Syllabus.id == syllabus_id,
+        Syllabus.user_id == current_user.id
+    ).first()
+    
     if not syllabus:
         raise HTTPException(status_code=404, detail="Syllabus not found")
     
@@ -188,7 +200,12 @@ def update_syllabus_details(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)  # <-- Require authentication
 ):
-    syllabus = db.query(Syllabus).filter(Syllabus.id == syllabus_id).first()
+    # Only allow users to update their own syllabi
+    syllabus = db.query(Syllabus).filter(
+        Syllabus.id == syllabus_id,
+        Syllabus.user_id == current_user.id
+    ).first()
+    
     if not syllabus:
         raise HTTPException(status_code=404, detail="Syllabus not found")
     
