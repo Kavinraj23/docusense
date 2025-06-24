@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import ClassCard from '../components/ClassCard';
 import type { AccentColor } from '../components/ClassCard';
 import UploadModal from '../components/UploadModal';
@@ -7,6 +9,8 @@ import type { Syllabus } from '../features/syllabi/syllabiApi';
 import SyllabusModal from '../components/SyllabusModal';
 
 const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const [selectedClass, setSelectedClass] = useState<number | null>(null);
   const [syllabi, setSyllabi] = useState<Syllabus[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,9 +31,25 @@ const DashboardPage: React.FC = () => {
       setError(null);
       const data = await fetchSyllabi();
       setSyllabi(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading syllabi:', error);
-      setError('Failed to load syllabi. Please try again later.');
+      
+      // Handle different types of errors
+      if (error.response?.status === 401) {
+        setError('Authentication required. Please log in again.');
+        // Redirect to login after a short delay
+        setTimeout(() => {
+          logout();
+          navigate('/login');
+        }, 2000);
+      } else if (error.response?.status === 404) {
+        // No syllabi found - this is normal for new users
+        setSyllabi([]);
+      } else if (error.response?.status >= 500) {
+        setError('Server error. Please try again later.');
+      } else {
+        setError('Failed to load syllabi. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }
@@ -98,6 +118,11 @@ const DashboardPage: React.FC = () => {
     }
   };
 
+  const handleLogout = () => {
+    logout(); // This will clear the token from localStorage
+    navigate('/login');
+  };
+
   const selectedSyllabus = syllabi.find(s => s.id === selectedClass);
 
   if (error) {
@@ -107,8 +132,8 @@ const DashboardPage: React.FC = () => {
   return (
     <div className={`flex h-screen ${isDarkMode ? 'dark bg-gray-900' : 'bg-gray-100'}`}>
       {/* Sidebar */}
-      <div className={`w-64 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-md`}>
-        <div className="p-6">
+      <div className={`w-64 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-md flex flex-col`}>
+        <div className="p-6 flex-1">
           <h2 className={`text-xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
             Study Snap
           </h2>
@@ -128,6 +153,25 @@ const DashboardPage: React.FC = () => {
               Settings
             </button>
           </nav>
+        </div>
+        
+        {/* Logout button at bottom of sidebar */}
+        <div className="p-6 border-t border-gray-200 dark:border-gray-700">
+          <button
+            onClick={handleLogout}
+            className={`w-full px-4 py-2 text-left rounded-md font-medium transition-colors ${
+              isDarkMode 
+                ? 'text-gray-300 hover:bg-gray-700 hover:text-white' 
+                : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span>Logout</span>
+            </div>
+          </button>
         </div>
       </div>
 

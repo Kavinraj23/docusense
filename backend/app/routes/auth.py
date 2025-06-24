@@ -3,7 +3,7 @@ Authentication routes for user registration and login.
 Provides endpoints for user registration and JWT token acquisition.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Form
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 from sqlalchemy.orm import Session
@@ -53,8 +53,8 @@ async def login_for_access_token(
 
 @router.post("/register")
 async def register(
-    email: str,
-    password: str,
+    email: str = Form(...),
+    password: str = Form(...),
     db: Session = Depends(get_db)
 ):
     """
