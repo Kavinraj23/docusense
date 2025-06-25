@@ -8,6 +8,7 @@ from app.db.session import SessionLocal
 from app.db.models.syllabus import Syllabus
 from app.services.gemini import extract_syllabus_info
 from app.services.extractor import extract_text
+from app.services.s3_service import s3_service
 from pydantic import BaseModel
 from app.services.security import get_current_user  # <-- Import the auth dependency
 from app.db.deps import get_db
@@ -46,12 +47,19 @@ async def upload_syllabus(
             detail="Only PDF and DOCX and TXT files are allowed"
         )
 
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
-    with open(file_path, 'wb') as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
     try:
-        extracted_text = extract_text(file_path)
+        # Read file content
+        file_content = await file.read()
+        
+        # Upload to S3
+        s3_url = s3_service.upload_file(
+            file_data=file_content,
+            file_name=file.filename,
+            content_type=file.content_type
+        )
+        
+        # Extract text from the file content (not from local file)
+        extracted_text = extract_text_from_bytes(file_content, file.filename)
         metadata = extract_syllabus_info(extracted_text)
 
         # Transform the nested Gemini response into flat model fields
@@ -95,13 +103,34 @@ async def upload_syllabus(
         return {
             "filename": file.filename,
             "syllabus_id": new_syllabus.id,
-            "metadata": metadata
+            "metadata": metadata,
+            "s3_url": s3_url
         }
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing syllabus: {str(e)}")
+
+def extract_text_from_bytes(file_content: bytes, filename: str) -> str:
+    """
+    Extract text from file content in memory instead of from local file.
+    """
+    # This is a simplified version - you might need to adapt your existing extract_text function
+    # to work with bytes instead of file paths
+    import tempfile
+    
+    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as temp_file:
+        temp_file.write(file_content)
+        temp_file_path = temp_file.name
+    
+    try:
+        extracted_text = extract_text(temp_file_path)
+        return extracted_text
+    finally:
+        # Clean up temporary file
+        if os.path.exists(temp_file_path):
+            os.unlink(temp_file_path)
 
 @router.get("/syllabi", response_model=List[dict])
 def list_syllabi(
@@ -158,14 +187,12 @@ def delete_syllabus(
     if not syllabus:
         raise HTTPException(status_code=404, detail="Syllabus not found")
     
-    # Delete the associated file if it exists
-    file_path = os.path.join(UPLOAD_DIR, syllabus.filename)
-    if os.path.exists(file_path):
-        try:
-            os.remove(file_path)
-        except OSError:
-            # Log the error but continue with DB deletion
-            print(f"Error deleting file: {file_path}")
+    # Delete the file from S3
+    try:
+        s3_service.delete_file(syllabus.filename)
+    except Exception as e:
+        print(f"Error deleting file from S3: {e}")
+        # Continue with database deletion even if S3 deletion fails
     
     # Delete from database
     db.delete(syllabus)
