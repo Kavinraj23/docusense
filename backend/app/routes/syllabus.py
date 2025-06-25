@@ -236,11 +236,35 @@ def update_syllabus_details(
     if not syllabus:
         raise HTTPException(status_code=404, detail="Syllabus not found")
     
-    # Update important dates
-    syllabus.first_class = syllabus_update.important_dates.first_class
-    syllabus.last_class = syllabus_update.important_dates.last_class
-    syllabus.midterm_dates = json.dumps(syllabus_update.important_dates.midterms)
-    syllabus.final_exam_date = syllabus_update.important_dates.final_exam
+    # Update the important dates
+    if syllabus_update.important_dates:
+        syllabus.first_class = syllabus_update.important_dates.first_class
+        syllabus.last_class = syllabus_update.important_dates.last_class
+        syllabus.midterm_dates = json.dumps(syllabus_update.important_dates.midterms)
+        syllabus.final_exam_date = syllabus_update.important_dates.final_exam
     
     db.commit()
-    return {"status": "success"}
+    db.refresh(syllabus)
+    
+    return {"message": "Syllabus updated successfully"}
+
+@router.get("/syllabi/{syllabus_id}/file-url")
+def get_syllabus_file_url(
+    syllabus_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """Get the S3 URL for a specific syllabus file."""
+    # Only allow users to access their own syllabi
+    syllabus = db.query(Syllabus).filter(
+        Syllabus.id == syllabus_id,
+        Syllabus.user_id == current_user.id
+    ).first()
+    
+    if not syllabus:
+        raise HTTPException(status_code=404, detail="Syllabus not found")
+    
+    # Get the S3 URL for the file
+    file_url = s3_service.get_file_url(syllabus.filename)
+    
+    return {"file_url": file_url}

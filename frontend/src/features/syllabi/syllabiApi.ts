@@ -47,3 +47,8 @@ export const updateSyllabusColor = async (id: number, color: AccentColor): Promi
 export const updateSyllabusDetails = async (id: number, updates: Partial<Syllabus>): Promise<void> => {
   await api.patch(`/syllabi/${id}`, updates);
 };
+
+export const getSyllabusFileUrl = async (id: number): Promise<string> => {
+  const response = await api.get(`/syllabi/${id}/file-url`);
+  return response.data.file_url;
+};

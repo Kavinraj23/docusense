@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Syllabus } from '../features/syllabi/syllabiApi';
-import { updateSyllabusDetails } from '../features/syllabi/syllabiApi';
+import { updateSyllabusDetails, getSyllabusFileUrl } from '../features/syllabi/syllabiApi';
 
 interface ModalProps {
   isOpen: boolean;
@@ -394,7 +394,29 @@ const SyllabusModal: React.FC<ModalProps> = ({ isOpen, onClose, syllabus, isDark
           </div>
 
           {/* Calendar Sync Button */}
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-between items-center pt-2">
+            <button 
+              onClick={async () => {
+                try {
+                  const fileUrl = await getSyllabusFileUrl(syllabus.id);
+                  window.open(fileUrl, '_blank');
+                } catch (error) {
+                  console.error('Failed to get file URL:', error);
+                  // You could add a toast notification here
+                }
+              }}
+              className={`inline-flex items-center px-4 py-2.5 rounded-lg transition-colors transform hover:scale-105 ${
+                isDarkMode 
+                  ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' 
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              View Syllabus
+            </button>
+            
             <button className="inline-flex items-center px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors transform hover:scale-105">
               <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
