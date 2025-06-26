@@ -28,8 +28,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   });
 
   const login = (newToken: string) => {
+    console.log('AuthContext.login called with token:', newToken);
     setToken(newToken);
     localStorage.setItem('authToken', newToken);
+    console.log('Token stored in localStorage:', localStorage.getItem('authToken'));
   };
 
   const logout = () => {

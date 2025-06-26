@@ -42,11 +42,20 @@ const LoginPage: React.FC = () => {
     setSuccessMessage(''); // Clear success message when attempting login
     
     try {
+      console.log('Attempting login with:', formData.email);
       const result = await login(formData.email, formData.password);
+      console.log('Login result:', result);
+      
       // Store the token and redirect to dashboard
+      console.log('Storing token:', result.access_token);
       authLogin(result.access_token);
+      
+      // Verify token was stored
+      console.log('Token in localStorage after login:', localStorage.getItem('authToken'));
+      
       navigate('/dashboard');
     } catch (err: any) {
+      console.error('Login error:', err);
       setError(err.message || 'Login failed');
     } finally {
       setIsLoading(false);

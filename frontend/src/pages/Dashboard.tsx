@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import ClassCard from '../components/ClassCard';
 import type { AccentColor } from '../components/ClassCard';
@@ -7,23 +7,72 @@ import UploadModal from '../components/UploadModal';
 import { fetchSyllabi, deleteSyllabus, updateSyllabusColor } from '../features/syllabi/syllabiApi';
 import type { Syllabus } from '../features/syllabi/syllabiApi';
 import SyllabusModal from '../components/SyllabusModal';
+import { getCalendarStatus } from '../services/api';
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { logout } = useAuth();
   const [selectedClass, setSelectedClass] = useState<number | null>(null);
   const [syllabi, setSyllabi] = useState<Syllabus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [calendarStatus, setCalendarStatus] = useState<{ connected: boolean; reason?: string; user_email?: string } | null>(null);
 
   useEffect(() => {
     // Apply dark mode to body
     document.documentElement.classList.toggle('dark', isDarkMode);
   }, [isDarkMode]);
+
+  // Check calendar status on load
+  const checkCalendarStatus = async () => {
+    try {
+      const status = await getCalendarStatus();
+      setCalendarStatus(status);
+    } catch (error) {
+      console.error('Error checking calendar status:', error);
+      setCalendarStatus({ connected: false, reason: 'Failed to check status' });
+    }
+  };
+
+  // Handle OAuth callback parameters
+  useEffect(() => {
+    const calendarStatus = searchParams.get('calendar');
+    const reason = searchParams.get('reason');
+    
+    if (calendarStatus === 'connected') {
+      setSuccess('Google Calendar connected successfully!');
+      // Clear the URL parameter
+      navigate('/dashboard', { replace: true });
+      // Refresh calendar status
+      checkCalendarStatus();
+    } else if (calendarStatus === 'error') {
+      const errorMessage = reason === 'invalid_state' 
+        ? 'OAuth session expired. Please try again.'
+        : 'Failed to connect Google Calendar. Please try again.';
+      setError(errorMessage);
+      // Clear the URL parameter
+      navigate('/dashboard', { replace: true });
+    }
+  }, [searchParams, navigate]);
+
+  // Check calendar status on component mount
+  useEffect(() => {
+    checkCalendarStatus();
+  }, []);
+
+  // Clear success message after 5 seconds
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
 
   const loadSyllabi = async () => {
     try {
@@ -211,20 +260,44 @@ const DashboardPage: React.FC = () => {
               <>
                 <div className="flex justify-between items-center mb-6">
                   <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>My Classes</h1>
-                  <button
-                    onClick={() => setIsUploadModalOpen(true)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center space-x-2"
-                  >
-                    <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
-                      <path d="M12 4v16m8-8H4"></path>
-                    </svg>
-                    <span>Upload Syllabus</span>
-                  </button>
+                  <div className="flex items-center space-x-4">
+                    {/* Calendar Status Indicator */}
+                    <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm ${
+                      calendarStatus?.connected 
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' 
+                        : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                    }`}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span>
+                        {calendarStatus?.connected 
+                          ? `Connected (${calendarStatus.user_email})` 
+                          : calendarStatus?.reason || 'Checking...'
+                        }
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setIsUploadModalOpen(true)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center space-x-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M12 4v16m8-8H4"></path>
+                      </svg>
+                      <span>Upload Syllabus</span>
+                    </button>
+                  </div>
                 </div>
 
                 {error && (
                   <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
                     {error}
+                  </div>
+                )}
+
+                {success && (
+                  <div className="mb-4 p-4 bg-green-100 text-green-700 rounded-lg">
+                    {success}
                   </div>
                 )}
 

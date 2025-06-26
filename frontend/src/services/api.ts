@@ -56,4 +56,28 @@ uploadApi.interceptors.request.use(
   }
 );
 
+// Check Google Calendar connection status
+export const getCalendarStatus = async () => {
+  const response = await api.get('/calendar/status');
+  return response.data;
+};
+
+// Initiate Google OAuth flow
+export const initiateGoogleAuth = async () => {
+  const response = await api.get('/calendar/auth/google');
+  return response.data;
+};
+
+// Sync syllabus to Google Calendar
+export const syncSyllabusToGoogleCalendar = async (syllabusId: string) => {
+  const response = await api.post('/calendar/sync-syllabus', { syllabus_id: syllabusId });
+  return response.data;
+};
+
+// Complete Google OAuth flow
+export const completeGoogleAuth = async (code: string) => {
+  const response = await api.post('/calendar/auth/google/complete', { code });
+  return response.data;
+};
+
 export default api;

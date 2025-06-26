@@ -10,3 +10,6 @@
 # Python cache
 __pycache__/
 *.py[cod]
+
+# ipad reference md
+ipad-reference-guide.md
