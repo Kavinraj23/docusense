@@ -10,15 +10,15 @@ import shutil
 import os
 import uuid
 from datetime import datetime
-from app.db.session import SessionLocal
-from app.db.models.syllabus import Syllabus
-from app.services.gemini import extract_syllabus_info
-from app.services.extractor import extract_text
-from app.services.s3_service import s3_service
+from ..db.session import SessionLocal
+from ..db.models.syllabus import Syllabus
+from ..services.gemini import extract_syllabus_info
+from ..services.extractor import extract_text
+from ..services.s3_service import s3_service
 from pydantic import BaseModel
-from app.services.security import get_current_user  # <-- Import the auth dependency
-from app.db.deps import get_db
-from app.db.models.user import User
+from ..services.security import get_current_user  # <-- Import the auth dependency
+from ..db.deps import get_db
+from ..db.models.user import User
 
 class ColorUpdate(BaseModel):
     accent_color: str
