@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+// Get API base URL from environment variable
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
 const api = axios.create({
-  baseURL: 'http://localhost:8000', // FastAPI base URL
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -36,7 +39,7 @@ api.interceptors.response.use(
 
 // Create a separate instance for file uploads
 export const uploadApi = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'multipart/form-data',
   },

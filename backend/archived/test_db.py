@@ -1,15 +1,16 @@
-from sqlalchemy import create_engine
-from db.session import DATABASE_URL
+import os
+from dotenv import load_dotenv
+from sqlalchemy import create_engine, text
 
-def test_connection():
-    try:
-        engine = create_engine(DATABASE_URL)
-        with engine.connect() as connection:
-            print("Successfully connected to the database!")
-            return True
-    except Exception as e:
-        print(f"Failed to connect to the database. Error: {str(e)}")
-        return False
+load_dotenv()
+DATABASE_URL = os.getenv('DATABASE_URL')
+print(f'Testing connection...')
+engine = create_engine(DATABASE_URL)
 
-if __name__ == "__main__":
-    test_connection()
+try:
+    with engine.connect() as conn:
+        result = conn.execute(text('SELECT version()'))
+        print('✅ Database connection successful!')
+        print(f'PostgreSQL version: {result.fetchone()[0]}')
+except Exception as e:
+    print(f'❌ Database connection failed: {e}')

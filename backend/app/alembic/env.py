@@ -9,6 +9,10 @@ sys.path.append(str(app_path))
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Import our models
 from db.session import Base, DATABASE_URL
