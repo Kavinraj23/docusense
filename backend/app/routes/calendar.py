@@ -4,9 +4,10 @@ Google Calendar routes for OAuth and calendar operations.
 
 import os
 import json
+import uuid
 from datetime import datetime, timedelta
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from typing import List, Optional, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, Query
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
