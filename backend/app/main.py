@@ -23,7 +23,7 @@ ALLOWED_ORIGINS = ["*"] if os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "t
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,  # Use environment variable
+    allow_origins=["*"],  # Allow all origins for testing
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
