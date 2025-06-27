@@ -171,7 +171,13 @@ const SyllabusModal: React.FC<ModalProps> = ({ isOpen, onClose, syllabus, isDark
                   Important Dates
                 </h3>
                 <button
-                  onClick={() => setIsEditing(!isEditing)}
+                  onClick={() => {
+                    if (isEditing) {
+                      handleSave();
+                    } else {
+                      setIsEditing(!isEditing);
+                    }
+                  }}
                   className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                     isEditing
                       ? 'bg-blue-600 text-white'
