@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8000/auth'; // Adjust if your backend runs elsewhere
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://study-snap-backend.onrender.com';
 
 export async function login(email: string, password: string) {
   // Create form data for OAuth2 compatibility
@@ -6,7 +6,7 @@ export async function login(email: string, password: string) {
   formData.append('username', email); // Backend expects 'username' field
   formData.append('password', password);
 
-  const response = await fetch(`${API_BASE_URL}/token`, {
+  const response = await fetch(`${API_BASE_URL}/auth/token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -27,7 +27,7 @@ export async function signup(email: string, password: string) {
   formData.append('email', email);
   formData.append('password', password);
 
-  const response = await fetch(`${API_BASE_URL}/register`, {
+  const response = await fetch(`${API_BASE_URL}/auth/register`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
