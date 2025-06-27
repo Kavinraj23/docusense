@@ -3,12 +3,12 @@ Google Calendar credentials model for storing OAuth tokens.
 """
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
 import uuid
-from ..session import Base
+from db.session import Base
 
 class GoogleCalendarCredentials(Base):
     """

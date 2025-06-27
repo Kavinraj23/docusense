@@ -1,7 +1,8 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, JSON
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.sql import func
 from datetime import datetime
-from ..session import Base
+from db.session import Base
 
 class Syllabus(Base):
     __tablename__ = "syllabi"

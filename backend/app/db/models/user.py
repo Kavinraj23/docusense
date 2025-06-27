@@ -3,11 +3,12 @@ User model for authentication and user management.
 """
 
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import uuid
-from ..session import Base
+from db.session import Base
 
 class User(Base):
     """

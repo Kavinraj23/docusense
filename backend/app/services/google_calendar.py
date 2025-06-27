@@ -3,17 +3,17 @@ Google Calendar service for OAuth authentication and calendar operations.
 """
 
 import os
+import json
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
+from typing import List, Dict, Any, Optional
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from sqlalchemy.orm import Session
-from ..db.models.calendar import GoogleCalendarCredentials
-from ..db.models.user import User
-import json
+from db.models.calendar import GoogleCalendarCredentials
+from db.models.user import User
 
 class GoogleCalendarService:
     """Service for Google Calendar operations."""

@@ -2,21 +2,20 @@
 Google Calendar routes for OAuth and calendar operations.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+import os
+import json
+from datetime import datetime, timedelta
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
-import uuid
 from pydantic import BaseModel
-import json
-
-from ..db.deps import get_db
-from ..db.models.user import User
-from ..db.models.calendar import GoogleCalendarCredentials, OAuthState
-from ..services.google_calendar import GoogleCalendarService
-from ..services.security import get_current_user
-from ..db.models.syllabus import Syllabus
+from db.deps import get_db
+from db.models.user import User
+from db.models.calendar import GoogleCalendarCredentials, OAuthState
+from services.google_calendar import GoogleCalendarService
+from services.security import get_current_user
+from db.models.syllabus import Syllabus
 
 router = APIRouter()
 calendar_service = GoogleCalendarService()

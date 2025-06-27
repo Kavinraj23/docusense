@@ -3,17 +3,19 @@ Authentication routes for user registration and login.
 Provides endpoints for user registration and JWT token acquisition.
 """
 
+from datetime import datetime, timedelta
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Form
-from fastapi.security import OAuth2PasswordRequestForm
-from datetime import timedelta
+from fastapi.security import OAuth2PasswordRequestForm, HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from ..db.deps import get_db
-from ..services.security import (
+from pydantic import BaseModel
+from db.deps import get_db
+from services.security import (
     Token, create_access_token, get_password_hash,
     verify_password, ACCESS_TOKEN_EXPIRE_MINUTES,
     get_current_user
 )
-from ..db.models.user import User
+from db.models.user import User
 
 router = APIRouter()
 

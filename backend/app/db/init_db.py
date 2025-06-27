@@ -1,5 +1,5 @@
-from .session import engine, Base
-from .models import * 
+from db.session import engine, Base
+from db.models import * 
 from sqlalchemy.exc import SQLAlchemyError
 
 def init_db():
