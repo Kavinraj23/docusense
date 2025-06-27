@@ -1,9 +1,15 @@
+"""
+Syllabus routes for handling syllabus upload and management.
+"""
+
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Response
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 import json
 import shutil
 import os
+import uuid
+from datetime import datetime
 from app.db.session import SessionLocal
 from app.db.models.syllabus import Syllabus
 from app.services.gemini import extract_syllabus_info
@@ -12,6 +18,7 @@ from app.services.s3_service import s3_service
 from pydantic import BaseModel
 from app.services.security import get_current_user  # <-- Import the auth dependency
 from app.db.deps import get_db
+from app.db.models.user import User
 
 class ColorUpdate(BaseModel):
     accent_color: str
@@ -25,6 +32,17 @@ class ImportantDates(BaseModel):
 class SyllabusUpdate(BaseModel):
     important_dates: ImportantDates
 
+class SyllabusResponse(BaseModel):
+    id: int
+    title: str
+    content: Optional[str]
+    file_url: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
 router = APIRouter()
 
 UPLOAD_DIR = 'uploads'
@@ -35,150 +53,65 @@ ACCEPTED_EXTENSIONS = {".pdf", ".docx" }
 def is_allowed_file(filename: str) -> bool:
     return any(filename.endswith(ext) for ext in ACCEPTED_EXTENSIONS)
 
-@router.post("/upload")
+@router.post("/upload", response_model=SyllabusResponse)
 async def upload_syllabus(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)  # <-- Require authentication
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    if not is_allowed_file(file.filename.lower()):
-        raise HTTPException(
-            status_code=400,
-            detail="Only PDF and DOCX and TXT files are allowed"
-        )
-
+    """Upload and process a syllabus file."""
+    
+    # Validate file type
+    if not file.filename.lower().endswith(('.pdf', '.docx', '.doc')):
+        raise HTTPException(status_code=400, detail="Only PDF, DOCX, and DOC files are allowed")
+    
     try:
         # Read file content
         file_content = await file.read()
         
         # Upload to S3
-        s3_url = s3_service.upload_file(
-            file_data=file_content,
-            file_name=file.filename,
-            content_type=file.content_type
+        file_name = f"syllabi/{current_user.id}/{uuid.uuid4()}_{file.filename}"
+        file_url = s3_service.upload_file(file_content, file_name, file.content_type)
+        
+        # Extract text from file
+        text_content = extract_text(file_content, file.filename)
+        
+        # Extract syllabus information using Gemini
+        syllabus_info = extract_syllabus_info(text_content)
+        
+        # Create syllabus record
+        syllabus = Syllabus(
+            user_id=current_user.id,
+            title=syllabus_info.get('title', file.filename),
+            content=text_content,
+            file_url=file_url
         )
         
-        # Extract text from the file content (not from local file)
-        extracted_text = extract_text_from_bytes(file_content, file.filename)
-        metadata = extract_syllabus_info(extracted_text)
-
-        # Transform the nested Gemini response into flat model fields
-        instructor_info = metadata.get("instructor", {})
-        term_info = metadata.get("term", {})
-        meeting_info = metadata.get("meeting_info", {})
-        important_dates = metadata.get("important_dates", {})
-        
-        new_syllabus = Syllabus(
-            filename=file.filename,
-            content_type=file.content_type,
-            user_id=current_user.id,  # Add the current user's ID
-            course_code=metadata.get("course_code"),
-            course_name=metadata.get("course_name"),
-            instructor_name=instructor_info.get("name"),
-            instructor_email=instructor_info.get("email"),
-            semester=term_info.get("semester"),
-            year=term_info.get("year"),
-            description=metadata.get("description"),
-            
-            # Meeting information
-            meeting_days=meeting_info.get("days"),
-            meeting_time=meeting_info.get("time"),
-            meeting_location=meeting_info.get("location"),
-            
-            # Important dates
-            first_class=important_dates.get("first_class"),
-            last_class=important_dates.get("last_class"),
-            midterm_dates=json.dumps(important_dates.get("midterms", [])),
-            final_exam_date=important_dates.get("final_exam"),
-            
-            # Grading and schedule
-            grading_policy=json.dumps(metadata.get("grading_policy", {})),
-            schedule_summary=metadata.get("schedule_summary")
-        )
-
-        db.add(new_syllabus)
+        db.add(syllabus)
         db.commit()
-        db.refresh(new_syllabus)
-
-        return {
-            "filename": file.filename,
-            "syllabus_id": new_syllabus.id,
-            "metadata": metadata,
-            "s3_url": s3_url
-        }
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        db.refresh(syllabus)
+        
+        return syllabus
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing syllabus: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to process syllabus: {str(e)}")
 
-def extract_text_from_bytes(file_content: bytes, filename: str) -> str:
-    """
-    Extract text from file content in memory instead of from local file.
-    """
-    # This is a simplified version - you might need to adapt your existing extract_text function
-    # to work with bytes instead of file paths
-    import tempfile
-    
-    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as temp_file:
-        temp_file.write(file_content)
-        temp_file_path = temp_file.name
-    
-    try:
-        extracted_text = extract_text(temp_file_path)
-        return extracted_text
-    finally:
-        # Clean up temporary file
-        if os.path.exists(temp_file_path):
-            os.unlink(temp_file_path)
-
-@router.get("/syllabi", response_model=List[dict])
-def list_syllabi(
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)  # <-- Require authentication
+@router.get("/", response_model=List[SyllabusResponse])
+async def get_syllabi(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    # Only return syllabi belonging to the current user
+    """Get all syllabi for the current user."""
     syllabi = db.query(Syllabus).filter(Syllabus.user_id == current_user.id).all()
-    return [
-        {
-            "id": syllabus.id,
-            "filename": syllabus.filename,
-            "course_code": syllabus.course_code,
-            "course_name": syllabus.course_name,
-            "instructor": {
-                "name": syllabus.instructor_name,
-                "email": syllabus.instructor_email
-            },
-            "term": {
-                "semester": syllabus.semester,
-                "year": syllabus.year
-            },
-            "description": syllabus.description,
-            "meeting_info": {
-                "days": syllabus.meeting_days,
-                "time": syllabus.meeting_time,
-                "location": syllabus.meeting_location
-            },
-            "important_dates": {
-                "first_class": syllabus.first_class,
-                "last_class": syllabus.last_class,
-                "midterms": json.loads(syllabus.midterm_dates) if syllabus.midterm_dates else [],
-                "final_exam": syllabus.final_exam_date
-            },
-            "grading_policy": json.loads(syllabus.grading_policy) if syllabus.grading_policy else {},
-            "schedule_summary": syllabus.schedule_summary,
-            "accent_color": syllabus.accent_color
-        }
-        for syllabus in syllabi
-    ]
+    return syllabi
 
-@router.delete("/syllabi/{syllabus_id}")
-def delete_syllabus(
+@router.get("/{syllabus_id}", response_model=SyllabusResponse)
+async def get_syllabus(
     syllabus_id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)  # <-- Require authentication
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    # Only allow users to delete their own syllabi
+    """Get a specific syllabus by ID."""
     syllabus = db.query(Syllabus).filter(
         Syllabus.id == syllabus_id,
         Syllabus.user_id == current_user.id
@@ -187,14 +120,30 @@ def delete_syllabus(
     if not syllabus:
         raise HTTPException(status_code=404, detail="Syllabus not found")
     
-    # Delete the file from S3
-    try:
-        s3_service.delete_file(syllabus.filename)
-    except Exception as e:
-        print(f"Error deleting file from S3: {e}")
-        # Continue with database deletion even if S3 deletion fails
+    return syllabus
+
+@router.delete("/{syllabus_id}")
+async def delete_syllabus(
+    syllabus_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a syllabus."""
+    syllabus = db.query(Syllabus).filter(
+        Syllabus.id == syllabus_id,
+        Syllabus.user_id == current_user.id
+    ).first()
     
-    # Delete from database
+    if not syllabus:
+        raise HTTPException(status_code=404, detail="Syllabus not found")
+    
+    # Delete from S3 if file exists
+    if syllabus.file_url:
+        try:
+            s3_service.delete_file(syllabus.file_url)
+        except Exception as e:
+            print(f"Failed to delete file from S3: {e}")
+    
     db.delete(syllabus)
     db.commit()
     
@@ -265,6 +214,6 @@ def get_syllabus_file_url(
         raise HTTPException(status_code=404, detail="Syllabus not found")
     
     # Get the S3 URL for the file
-    file_url = s3_service.get_file_url(syllabus.filename)
+    file_url = s3_service.get_file_url(syllabus.file_url)
     
     return {"file_url": file_url}

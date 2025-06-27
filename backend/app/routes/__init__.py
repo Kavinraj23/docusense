@@ -1,1 +1,1 @@
-from app.routes.syllabus import router as syllabus_router
+# Empty file - remove the problematic import

@@ -1,4 +1,4 @@
-from app.db.session import SessionLocal
+from db.session import SessionLocal
 from typing import Generator
 from sqlalchemy.orm import Session
 
