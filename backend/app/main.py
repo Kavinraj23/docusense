@@ -3,9 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 
-from .routes.syllabus import router as syllabus_router
-from .routes.auth import router as auth_router  # Add auth router
-from .routes.calendar import router as calendar_router  # Add calendar router
+# Use absolute imports for production
+from routes.syllabus import router as syllabus_router
+from routes.auth import router as auth_router
+from routes.calendar import router as calendar_router
 
 load_dotenv()
 app = FastAPI(
