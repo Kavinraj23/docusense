@@ -35,28 +35,68 @@ class SyllabusUpdate(BaseModel):
 class SyllabusResponse(BaseModel):
     id: int
     filename: str
-    content_type: str
-    upload_time: datetime
-    course_code: Optional[str]
-    course_name: Optional[str]
-    instructor_name: Optional[str]
-    instructor_email: Optional[str]
-    semester: Optional[str]
-    year: Optional[str]
-    description: Optional[str]
-    accent_color: Optional[str]
-    meeting_days: Optional[str]
-    meeting_time: Optional[str]
-    meeting_location: Optional[str]
-    first_class: Optional[str]
-    last_class: Optional[str]
-    midterm_dates: Optional[str]
-    final_exam_date: Optional[str]
-    grading_policy: Optional[str]
-    schedule_summary: Optional[str]
+    course_code: str
+    course_name: str
+    instructor: dict
+    term: dict
+    description: str
+    meeting_info: dict
+    important_dates: dict
+    grading_policy: dict
+    schedule_summary: str
+    accent_color: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+def transform_syllabus_to_response(syllabus: Syllabus) -> dict:
+    """Transform database syllabus to frontend-compatible format"""
+    import json
+    
+    # Parse JSON strings back to objects
+    midterm_dates = []
+    if syllabus.midterm_dates:
+        try:
+            midterm_dates = json.loads(syllabus.midterm_dates)
+        except:
+            midterm_dates = []
+    
+    grading_policy = {}
+    if syllabus.grading_policy:
+        try:
+            grading_policy = json.loads(syllabus.grading_policy)
+        except:
+            grading_policy = {}
+    
+    return {
+        "id": syllabus.id,
+        "filename": syllabus.filename,
+        "course_code": syllabus.course_code or "",
+        "course_name": syllabus.course_name or "",
+        "instructor": {
+            "name": syllabus.instructor_name or "",
+            "email": syllabus.instructor_email or ""
+        },
+        "term": {
+            "semester": syllabus.semester or "",
+            "year": syllabus.year or ""
+        },
+        "description": syllabus.description or "",
+        "meeting_info": {
+            "days": syllabus.meeting_days or "",
+            "time": syllabus.meeting_time or "",
+            "location": syllabus.meeting_location or ""
+        },
+        "important_dates": {
+            "first_class": syllabus.first_class or "",
+            "last_class": syllabus.last_class or "",
+            "midterms": midterm_dates,
+            "final_exam": syllabus.final_exam_date or ""
+        },
+        "grading_policy": grading_policy,
+        "schedule_summary": syllabus.schedule_summary or "",
+        "accent_color": syllabus.accent_color
+    }
 
 router = APIRouter()
 
@@ -68,7 +108,7 @@ ACCEPTED_EXTENSIONS = {".pdf", ".docx" }
 def is_allowed_file(filename: str) -> bool:
     return any(filename.endswith(ext) for ext in ACCEPTED_EXTENSIONS)
 
-@router.post("/upload", response_model=SyllabusResponse)
+@router.post("/upload")
 async def upload_syllabus(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
@@ -121,21 +161,21 @@ async def upload_syllabus(
         db.commit()
         db.refresh(syllabus)
         
-        return syllabus
+        return transform_syllabus_to_response(syllabus)
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process syllabus: {str(e)}")
 
-@router.get("/", response_model=List[SyllabusResponse])
+@router.get("/")
 async def get_syllabi(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get all syllabi for the current user."""
     syllabi = db.query(Syllabus).filter(Syllabus.user_id == current_user.id).all()
-    return syllabi
+    return [transform_syllabus_to_response(syllabus) for syllabus in syllabi]
 
-@router.get("/{syllabus_id}", response_model=SyllabusResponse)
+@router.get("/{syllabus_id}")
 async def get_syllabus(
     syllabus_id: int,
     current_user: User = Depends(get_current_user),
@@ -150,7 +190,7 @@ async def get_syllabus(
     if not syllabus:
         raise HTTPException(status_code=404, detail="Syllabus not found")
     
-    return syllabus
+    return transform_syllabus_to_response(syllabus)
 
 @router.delete("/{syllabus_id}")
 async def delete_syllabus(
@@ -177,7 +217,7 @@ async def delete_syllabus(
     
     return {"message": "Syllabus deleted successfully"}
 
-@router.patch("/syllabi/{syllabus_id}/color")
+@router.patch("/{syllabus_id}/color")
 def update_syllabus_color(
     syllabus_id: int,
     color_update: ColorUpdate,
@@ -197,7 +237,7 @@ def update_syllabus_color(
     db.commit()
     return {"status": "success"}
 
-@router.patch("/syllabi/{syllabus_id}")
+@router.patch("/{syllabus_id}")
 def update_syllabus_details(
     syllabus_id: int,
     syllabus_update: SyllabusUpdate,
