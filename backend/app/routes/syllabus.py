@@ -53,50 +53,68 @@ def transform_syllabus_to_response(syllabus: Syllabus) -> dict:
     """Transform database syllabus to frontend-compatible format"""
     import json
     
-    # Parse JSON strings back to objects
-    midterm_dates = []
-    if syllabus.midterm_dates:
-        try:
-            midterm_dates = json.loads(syllabus.midterm_dates)
-        except:
-            midterm_dates = []
-    
-    grading_policy = {}
-    if syllabus.grading_policy:
-        try:
-            grading_policy = json.loads(syllabus.grading_policy)
-        except:
-            grading_policy = {}
-    
-    return {
-        "id": syllabus.id,
-        "filename": syllabus.filename,
-        "course_code": syllabus.course_code or "",
-        "course_name": syllabus.course_name or "",
-        "instructor": {
-            "name": syllabus.instructor_name or "",
-            "email": syllabus.instructor_email or ""
-        },
-        "term": {
-            "semester": syllabus.semester or "",
-            "year": syllabus.year or ""
-        },
-        "description": syllabus.description or "",
-        "meeting_info": {
-            "days": syllabus.meeting_days or "",
-            "time": syllabus.meeting_time or "",
-            "location": syllabus.meeting_location or ""
-        },
-        "important_dates": {
-            "first_class": syllabus.first_class or "",
-            "last_class": syllabus.last_class or "",
-            "midterms": midterm_dates,
-            "final_exam": syllabus.final_exam_date or ""
-        },
-        "grading_policy": grading_policy,
-        "schedule_summary": syllabus.schedule_summary or "",
-        "accent_color": syllabus.accent_color
-    }
+    try:
+        # Parse JSON strings back to objects
+        midterm_dates = []
+        if syllabus.midterm_dates:
+            try:
+                midterm_dates = json.loads(syllabus.midterm_dates)
+            except:
+                midterm_dates = []
+        
+        grading_policy = {}
+        if syllabus.grading_policy:
+            try:
+                grading_policy = json.loads(syllabus.grading_policy)
+            except:
+                grading_policy = {}
+        
+        return {
+            "id": syllabus.id,
+            "filename": syllabus.filename or "",
+            "course_code": syllabus.course_code or "",
+            "course_name": syllabus.course_name or "",
+            "instructor": {
+                "name": syllabus.instructor_name or "",
+                "email": syllabus.instructor_email or ""
+            },
+            "term": {
+                "semester": syllabus.semester or "",
+                "year": syllabus.year or ""
+            },
+            "description": syllabus.description or "",
+            "meeting_info": {
+                "days": syllabus.meeting_days or "",
+                "time": syllabus.meeting_time or "",
+                "location": syllabus.meeting_location or ""
+            },
+            "important_dates": {
+                "first_class": syllabus.first_class or "",
+                "last_class": syllabus.last_class or "",
+                "midterms": midterm_dates,
+                "final_exam": syllabus.final_exam_date or ""
+            },
+            "grading_policy": grading_policy,
+            "schedule_summary": syllabus.schedule_summary or "",
+            "accent_color": syllabus.accent_color
+        }
+    except Exception as e:
+        print(f"Error transforming syllabus {syllabus.id}: {str(e)}")
+        # Return a minimal valid response
+        return {
+            "id": syllabus.id,
+            "filename": getattr(syllabus, 'filename', ''),
+            "course_code": "",
+            "course_name": getattr(syllabus, 'course_name', ''),
+            "instructor": {"name": "", "email": ""},
+            "term": {"semester": "", "year": ""},
+            "description": "",
+            "meeting_info": {"days": "", "time": "", "location": ""},
+            "important_dates": {"first_class": "", "last_class": "", "midterms": [], "final_exam": ""},
+            "grading_policy": {},
+            "schedule_summary": "",
+            "accent_color": None
+        }
 
 router = APIRouter()
 
@@ -172,8 +190,26 @@ async def get_syllabi(
     db: Session = Depends(get_db)
 ):
     """Get all syllabi for the current user."""
-    syllabi = db.query(Syllabus).filter(Syllabus.user_id == current_user.id).all()
-    return [transform_syllabus_to_response(syllabus) for syllabus in syllabi]
+    try:
+        syllabi = db.query(Syllabus).filter(Syllabus.user_id == current_user.id).all()
+        print(f"Found {len(syllabi)} syllabi for user {current_user.id}")
+        
+        transformed_syllabi = []
+        for syllabus in syllabi:
+            try:
+                print(f"Processing syllabus {syllabus.id}: filename={syllabus.filename}, course_name={syllabus.course_name}")
+                transformed = transform_syllabus_to_response(syllabus)
+                transformed_syllabi.append(transformed)
+            except Exception as e:
+                print(f"Error transforming syllabus {syllabus.id}: {str(e)}")
+                # Skip this syllabus if transformation fails
+                continue
+        
+        print(f"Successfully transformed {len(transformed_syllabi)} syllabi")
+        return transformed_syllabi
+    except Exception as e:
+        print(f"Error in get_syllabi: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch syllabi: {str(e)}")
 
 @router.get("/{syllabus_id}")
 async def get_syllabus(
