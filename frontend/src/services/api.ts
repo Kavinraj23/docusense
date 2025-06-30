@@ -1,11 +1,14 @@
 import axios, { type AxiosResponse, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
+interface ErrorResponse {
+  detail?: string;
+  message?: string;
+}
+
 // Get API base URL from environment variable
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
-// Debug: Log the API URL being used
-console.log('API Base URL:', API_BASE_URL);
-console.log('Environment variable:', import.meta.env.VITE_API_BASE_URL);
+// API configuration
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -36,6 +39,11 @@ api.interceptors.response.use(
       // Token is invalid or expired, redirect to login
       localStorage.removeItem('authToken');
       window.location.href = '/login';
+    } else if (error.response?.status === 422) {
+      // Handle validation errors more gracefully
+      const errorData = error.response.data as ErrorResponse;
+      const errorMessage = errorData?.detail || errorData?.message || 'Invalid request data';
+      error.message = errorMessage;
     }
     return Promise.reject(error);
   }

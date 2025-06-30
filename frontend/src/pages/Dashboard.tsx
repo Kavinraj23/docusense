@@ -174,9 +174,7 @@ const DashboardPage: React.FC = () => {
 
   const selectedSyllabus = syllabi.find(s => s.id === selectedClass);
 
-  if (error) {
-    console.error('Current error state:', error); // Debug log
-  }
+
 
   return (
     <div className={`flex h-screen ${isDarkMode ? 'dark bg-gray-900' : 'bg-gray-100'}`}>
@@ -261,22 +259,15 @@ const DashboardPage: React.FC = () => {
                 <div className="flex justify-between items-center mb-6">
                   <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>My Classes</h1>
                   <div className="flex items-center space-x-4">
-                    {/* Calendar Status Indicator */}
-                    <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm ${
-                      calendarStatus?.connected 
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' 
-                        : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-                    }`}>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span>
-                        {calendarStatus?.connected 
-                          ? `Connected (${calendarStatus.user_email})` 
-                          : calendarStatus?.reason || 'Checking...'
-                        }
-                      </span>
-                    </div>
+                    {/* Calendar Status Indicator - Only show if connected */}
+                    {calendarStatus?.connected && (
+                      <div className="flex items-center space-x-2 px-3 py-2 rounded-lg text-sm bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span>Connected ({calendarStatus.user_email})</span>
+                      </div>
+                    )}
                     <button
                       onClick={() => setIsUploadModalOpen(true)}
                       className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center space-x-2"
