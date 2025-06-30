@@ -1,7 +1,0 @@
-# Add these variables to your .env file:
-
-# AWS S3 Configuration
-AWS_ACCESS_KEY_ID=your-access-key-id-from-csv
-AWS_SECRET_ACCESS_KEY=your-secret-access-key-from-csv
-AWS_REGION=us-east-1
-S3_BUCKET_NAME=your-bucket-name 
