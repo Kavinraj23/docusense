@@ -34,11 +34,26 @@ class SyllabusUpdate(BaseModel):
 
 class SyllabusResponse(BaseModel):
     id: int
-    title: str
-    content: Optional[str]
-    file_url: Optional[str]
-    created_at: datetime
-    updated_at: datetime
+    filename: str
+    content_type: str
+    upload_time: datetime
+    course_code: Optional[str]
+    course_name: Optional[str]
+    instructor_name: Optional[str]
+    instructor_email: Optional[str]
+    semester: Optional[str]
+    year: Optional[str]
+    description: Optional[str]
+    accent_color: Optional[str]
+    meeting_days: Optional[str]
+    meeting_time: Optional[str]
+    meeting_location: Optional[str]
+    first_class: Optional[str]
+    last_class: Optional[str]
+    midterm_dates: Optional[str]
+    final_exam_date: Optional[str]
+    grading_policy: Optional[str]
+    schedule_summary: Optional[str]
 
     class Config:
         from_attributes = True
@@ -82,9 +97,24 @@ async def upload_syllabus(
         # Create syllabus record
         syllabus = Syllabus(
             user_id=current_user.id,
-            title=syllabus_info.get('title', file.filename),
-            content=text_content,
-            file_url=file_url
+            filename=file.filename,
+            content_type=file.content_type,
+            course_name=syllabus_info.get('title', file.filename),
+            course_code=syllabus_info.get('course_code', ''),
+            instructor_name=syllabus_info.get('instructor', {}).get('name', ''),
+            instructor_email=syllabus_info.get('instructor', {}).get('email', ''),
+            semester=syllabus_info.get('term', {}).get('semester', ''),
+            year=syllabus_info.get('term', {}).get('year', ''),
+            description=syllabus_info.get('description', ''),
+            meeting_days=syllabus_info.get('meeting_info', {}).get('days', ''),
+            meeting_time=syllabus_info.get('meeting_info', {}).get('time', ''),
+            meeting_location=syllabus_info.get('meeting_info', {}).get('location', ''),
+            first_class=syllabus_info.get('important_dates', {}).get('first_class', ''),
+            last_class=syllabus_info.get('important_dates', {}).get('last_class', ''),
+            midterm_dates=json.dumps(syllabus_info.get('important_dates', {}).get('midterms', [])),
+            final_exam_date=syllabus_info.get('important_dates', {}).get('final_exam', ''),
+            grading_policy=json.dumps(syllabus_info.get('grading_policy', {})),
+            schedule_summary=syllabus_info.get('schedule_summary', '')
         )
         
         db.add(syllabus)
@@ -138,11 +168,9 @@ async def delete_syllabus(
         raise HTTPException(status_code=404, detail="Syllabus not found")
     
     # Delete from S3 if file exists
-    if syllabus.file_url:
-        try:
-            s3_service.delete_file(syllabus.file_url)
-        except Exception as e:
-            print(f"Failed to delete file from S3: {e}")
+    # Note: We don't store file_url in the database anymore, so we can't delete from S3
+    # The file will remain in S3 for now
+    pass
     
     db.delete(syllabus)
     db.commit()
@@ -197,23 +225,3 @@ def update_syllabus_details(
     
     return {"message": "Syllabus updated successfully"}
 
-@router.get("/syllabi/{syllabus_id}/file-url")
-def get_syllabus_file_url(
-    syllabus_id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    """Get the S3 URL for a specific syllabus file."""
-    # Only allow users to access their own syllabi
-    syllabus = db.query(Syllabus).filter(
-        Syllabus.id == syllabus_id,
-        Syllabus.user_id == current_user.id
-    ).first()
-    
-    if not syllabus:
-        raise HTTPException(status_code=404, detail="Syllabus not found")
-    
-    # Get the S3 URL for the file
-    file_url = s3_service.get_file_url(syllabus.file_url)
-    
-    return {"file_url": file_url}
