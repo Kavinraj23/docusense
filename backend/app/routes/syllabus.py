@@ -179,7 +179,8 @@ async def upload_syllabus(
         db.commit()
         db.refresh(syllabus)
         
-        return transform_syllabus_to_response(syllabus)
+        # Return a simple success response for now
+        return {"message": "Syllabus uploaded successfully", "id": syllabus.id}
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process syllabus: {str(e)}")
@@ -194,19 +195,9 @@ async def get_syllabi(
         syllabi = db.query(Syllabus).filter(Syllabus.user_id == current_user.id).all()
         print(f"Found {len(syllabi)} syllabi for user {current_user.id}")
         
-        transformed_syllabi = []
-        for syllabus in syllabi:
-            try:
-                print(f"Processing syllabus {syllabus.id}: filename={syllabus.filename}, course_name={syllabus.course_name}")
-                transformed = transform_syllabus_to_response(syllabus)
-                transformed_syllabi.append(transformed)
-            except Exception as e:
-                print(f"Error transforming syllabus {syllabus.id}: {str(e)}")
-                # Skip this syllabus if transformation fails
-                continue
+        # Return a simple response for now to test
+        return []
         
-        print(f"Successfully transformed {len(transformed_syllabi)} syllabi")
-        return transformed_syllabi
     except Exception as e:
         print(f"Error in get_syllabi: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch syllabi: {str(e)}")
