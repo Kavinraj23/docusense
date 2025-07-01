@@ -32,20 +32,20 @@ export interface Syllabus {
 }
 
 export const fetchSyllabi = async (): Promise<Syllabus[]> => {
-  const response = await api.get('/syllabi');
+  const response = await api.get('/');
   return response.data;
 };
 
 export const deleteSyllabus = async (id: number): Promise<void> => {
-  await api.delete(`/syllabi/${id}`);
+  await api.delete(`/${id}`);
 };
 
 export const updateSyllabusColor = async (id: number, color: AccentColor): Promise<void> => {
-  await api.patch(`/syllabi/${id}/color`, { accent_color: color });
+  await api.patch(`/${id}/color`, { accent_color: color });
 };
 
 export const updateSyllabusDetails = async (id: number, updates: Partial<Syllabus>): Promise<void> => {
-  await api.patch(`/syllabi/${id}`, updates);
+  await api.patch(`/${id}`, updates);
 };
 
 // Note: File URL functionality removed as we don't store file_url in database anymore
