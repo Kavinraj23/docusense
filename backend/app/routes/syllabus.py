@@ -191,8 +191,25 @@ async def get_syllabi(
     db: Session = Depends(get_db)
 ):
     """Get all syllabi for the current user."""
-    # Return empty array without any database queries
-    return []
+    try:
+        syllabi = db.query(Syllabus).filter(Syllabus.user_id == current_user.id).all()
+        result = []
+        for syllabus in syllabi:
+            try:
+                transformed = transform_syllabus_to_response(syllabus)
+                result.append(transformed)
+            except Exception as e:
+                print(f"Error transforming syllabus {getattr(syllabus, 'id', 'unknown')}: {e}")
+                continue
+        return result
+    except Exception as e:
+        print(f"Error in get_syllabi: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch syllabi: {e}")
+
+@router.get("/test")
+async def test_endpoint():
+    """Test endpoint to verify routing works."""
+    return {"message": "Test endpoint working"}
 
 @router.get("/{syllabus_id}")
 async def get_syllabus(
