@@ -205,13 +205,14 @@ async def upload_syllabus(
 
 @router.get("/", response_model=List[SyllabusResponse])
 async def get_syllabi(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    # Temporarily remove auth to test response model
+    # current_user: User = Depends(get_current_user),
+    # db: Session = Depends(get_db)
 ):
     """Get all syllabi for the current user."""
     try:
         # Temporarily return empty list to test endpoint
-        print(f"Getting syllabi for user {current_user.id}")
+        print("Getting syllabi without auth")
         return []
         
         # Original code commented out for debugging
