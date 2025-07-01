@@ -32,6 +32,10 @@ class ImportantDates(BaseModel):
 class SyllabusUpdate(BaseModel):
     important_dates: ImportantDates
 
+class UploadResponse(BaseModel):
+    filename: str
+    metadata: dict
+
 class SyllabusResponse(BaseModel):
     id: int
     filename: str
@@ -54,6 +58,8 @@ def transform_syllabus_to_response(syllabus: Syllabus) -> dict:
     import json
     
     try:
+        print(f"Transforming syllabus {syllabus.id}: {syllabus.filename}")
+        
         # Parse JSON strings back to objects
         midterm_dates = []
         if syllabus.midterm_dates:
@@ -69,7 +75,7 @@ def transform_syllabus_to_response(syllabus: Syllabus) -> dict:
             except:
                 grading_policy = {}
         
-        return {
+        result = {
             "id": syllabus.id,
             "filename": syllabus.filename or "",
             "course_code": syllabus.course_code or "",
@@ -98,6 +104,9 @@ def transform_syllabus_to_response(syllabus: Syllabus) -> dict:
             "schedule_summary": syllabus.schedule_summary or "",
             "accent_color": syllabus.accent_color
         }
+        
+        print(f"Transformed result: {result}")
+        return result
     except Exception as e:
         print(f"Error transforming syllabus {syllabus.id}: {str(e)}")
         # Return a minimal valid response
@@ -126,7 +135,7 @@ ACCEPTED_EXTENSIONS = {".pdf", ".docx" }
 def is_allowed_file(filename: str) -> bool:
     return any(filename.endswith(ext) for ext in ACCEPTED_EXTENSIONS)
 
-@router.post("/upload")
+@router.post("/upload", response_model=UploadResponse)
 async def upload_syllabus(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
@@ -179,29 +188,45 @@ async def upload_syllabus(
         db.commit()
         db.refresh(syllabus)
         
-        # Return a simple success response for now
-        return {"message": "Syllabus uploaded successfully", "id": syllabus.id}
+        # Return the expected UploadResponse format
+        return UploadResponse(
+            filename=file.filename,
+            metadata={
+                "title": syllabus_info.get('title', file.filename),
+                "author": syllabus_info.get('instructor', {}).get('name', ''),
+                "document_type": "syllabus",
+                "date": datetime.now().isoformat(),
+                "id": str(syllabus.id)
+            }
+        )
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process syllabus: {str(e)}")
 
-@router.get("/")
+@router.get("/", response_model=List[SyllabusResponse])
 async def get_syllabi(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get all syllabi for the current user."""
     try:
-        syllabi = db.query(Syllabus).filter(Syllabus.user_id == current_user.id).all()
-        result = []
-        for syllabus in syllabi:
-            try:
-                transformed = transform_syllabus_to_response(syllabus)
-                result.append(transformed)
-            except Exception as e:
-                print(f"Error transforming syllabus {getattr(syllabus, 'id', 'unknown')}: {e}")
-                continue
-        return result
+        # Temporarily return empty list to test endpoint
+        print(f"Getting syllabi for user {current_user.id}")
+        return []
+        
+        # Original code commented out for debugging
+        # syllabi = db.query(Syllabus).filter(Syllabus.user_id == current_user.id).all()
+        # result = []
+        # for syllabus in syllabi:
+        #     try:
+        #         transformed = transform_syllabus_to_response(syllabus)
+        #         # Validate the transformed data against SyllabusResponse
+        #         validated = SyllabusResponse(**transformed)
+        #         result.append(validated.model_dump())
+        #     except Exception as e:
+        #         print(f"Error transforming syllabus {getattr(syllabus, 'id', 'unknown')}: {e}")
+        #         continue
+        # return result
     except Exception as e:
         print(f"Error in get_syllabi: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch syllabi: {e}")
@@ -211,7 +236,12 @@ async def test_endpoint():
     """Test endpoint to verify routing works."""
     return {"message": "Test endpoint working"}
 
-@router.get("/{syllabus_id}")
+@router.get("/test-empty")
+async def test_empty_syllabi():
+    """Test endpoint that returns empty syllabi list."""
+    return []
+
+@router.get("/{syllabus_id}", response_model=SyllabusResponse)
 async def get_syllabus(
     syllabus_id: int,
     current_user: User = Depends(get_current_user),
@@ -226,7 +256,8 @@ async def get_syllabus(
     if not syllabus:
         raise HTTPException(status_code=404, detail="Syllabus not found")
     
-    return transform_syllabus_to_response(syllabus)
+    transformed = transform_syllabus_to_response(syllabus)
+    return SyllabusResponse(**transformed)
 
 @router.delete("/{syllabus_id}")
 async def delete_syllabus(
