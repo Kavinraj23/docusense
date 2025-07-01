@@ -205,29 +205,23 @@ async def upload_syllabus(
 
 @router.get("/", response_model=List[SyllabusResponse])
 async def get_syllabi(
-    # Temporarily remove auth to test response model
-    # current_user: User = Depends(get_current_user),
-    # db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """Get all syllabi for the current user."""
     try:
-        # Temporarily return empty list to test endpoint
-        print("Getting syllabi without auth")
-        return []
-        
-        # Original code commented out for debugging
-        # syllabi = db.query(Syllabus).filter(Syllabus.user_id == current_user.id).all()
-        # result = []
-        # for syllabus in syllabi:
-        #     try:
-        #         transformed = transform_syllabus_to_response(syllabus)
-        #         # Validate the transformed data against SyllabusResponse
-        #         validated = SyllabusResponse(**transformed)
-        #         result.append(validated.model_dump())
-        #     except Exception as e:
-        #         print(f"Error transforming syllabus {getattr(syllabus, 'id', 'unknown')}: {e}")
-        #         continue
-        # return result
+        syllabi = db.query(Syllabus).filter(Syllabus.user_id == current_user.id).all()
+        result = []
+        for syllabus in syllabi:
+            try:
+                transformed = transform_syllabus_to_response(syllabus)
+                # Validate the transformed data against SyllabusResponse
+                validated = SyllabusResponse(**transformed)
+                result.append(validated.model_dump())
+            except Exception as e:
+                print(f"Error transforming syllabus {getattr(syllabus, 'id', 'unknown')}: {e}")
+                continue
+        return result
     except Exception as e:
         print(f"Error in get_syllabi: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch syllabi: {e}")
