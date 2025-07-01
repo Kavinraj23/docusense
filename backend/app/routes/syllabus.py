@@ -191,16 +191,8 @@ async def get_syllabi(
     db: Session = Depends(get_db)
 ):
     """Get all syllabi for the current user."""
-    try:
-        syllabi = db.query(Syllabus).filter(Syllabus.user_id == current_user.id).all()
-        print(f"Found {len(syllabi)} syllabi for user {current_user.id}")
-        
-        # Return a simple response for now to test
-        return []
-        
-    except Exception as e:
-        print(f"Error in get_syllabi: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to fetch syllabi: {str(e)}")
+    # Return empty array without any database queries
+    return []
 
 @router.get("/{syllabus_id}")
 async def get_syllabus(
