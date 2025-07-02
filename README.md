@@ -4,8 +4,6 @@
 
 🌐 **Live Demo**: [https://study-snap-self.vercel.app/](https://study-snap-self.vercel.app/)
 
-> ⚠️ **Note**: Login/Signup functionality is currently not working and will be available soon.
-
 ## ✨ Features
 
 - **AI Syllabus Processing**: Extract course info, dates, and meeting details from PDF/DOCX files
