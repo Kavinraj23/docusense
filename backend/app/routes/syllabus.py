@@ -254,6 +254,29 @@ async def get_syllabus(
     transformed = transform_syllabus_to_response(syllabus)
     return SyllabusResponse(**transformed)
 
+@router.get("/{syllabus_id}/file")
+async def get_syllabus_file_url(
+    syllabus_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get the file URL for a syllabus."""
+    syllabus = db.query(Syllabus).filter(
+        Syllabus.id == syllabus_id,
+        Syllabus.user_id == current_user.id
+    ).first()
+    
+    if not syllabus:
+        raise HTTPException(status_code=404, detail="Syllabus not found")
+    
+    # Generate S3 URL for the file
+    file_name = f"syllabi/{current_user.id}/{syllabus.filename}"
+    try:
+        file_url = s3_service.get_file_url(file_name)
+        return {"file_url": file_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get file URL: {str(e)}")
+
 @router.delete("/{syllabus_id}")
 async def delete_syllabus(
     syllabus_id: int,
