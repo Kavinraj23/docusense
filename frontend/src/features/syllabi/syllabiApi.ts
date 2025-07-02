@@ -48,7 +48,8 @@ export const updateSyllabusDetails = async (id: number, updates: Partial<Syllabu
   await api.patch(`/${id}`, updates);
 };
 
-// Note: File URL functionality removed as we don't store file_url in database anymore
+// Get syllabus file URL from S3
 export const getSyllabusFileUrl = async (id: number): Promise<string> => {
-  throw new Error("File URL functionality not available");
+  const response = await api.get(`/${id}/file`);
+  return response.data.file_url;
 };
