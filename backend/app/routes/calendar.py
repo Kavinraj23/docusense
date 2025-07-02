@@ -66,12 +66,15 @@ async def google_auth_callback(
 ):
     """Handle Google OAuth callback."""
     try:
+        # Get frontend URL from environment variable
+        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+        
         # Check for OAuth errors first
         if error:
-            return RedirectResponse(url=f"http://localhost:5173/dashboard?calendar=error&reason=oauth_error&error={error}")
+            return RedirectResponse(url=f"{frontend_url}/dashboard?calendar=error&reason=oauth_error&error={error}")
         
         if not state:
-            return RedirectResponse(url="http://localhost:5173/dashboard?calendar=error&reason=invalid_state")
+            return RedirectResponse(url=f"{frontend_url}/dashboard?calendar=error&reason=invalid_state")
         
         oauth_state = db.query(OAuthState).filter(OAuthState.state == state).first()
         if not oauth_state:
@@ -84,13 +87,13 @@ async def google_auth_callback(
                     break
             
             if not oauth_state:
-                return RedirectResponse(url="http://localhost:5173/dashboard?calendar=error&reason=invalid_state")
+                return RedirectResponse(url=f"{frontend_url}/dashboard?calendar=error&reason=invalid_state")
         
         # Check if state has expired
         if oauth_state.expires_at < datetime.utcnow():
             db.delete(oauth_state)
             db.commit()
-            return RedirectResponse(url="http://localhost:5173/dashboard?calendar=error&reason=expired_state")
+            return RedirectResponse(url=f"{frontend_url}/dashboard?calendar=error&reason=expired_state")
         
         user_id = oauth_state.user_id
         
@@ -98,20 +101,20 @@ async def google_auth_callback(
         try:
             tokens = calendar_service.exchange_code_for_tokens(code)
         except Exception as e:
-            return RedirectResponse(url=f"http://localhost:5173/dashboard?calendar=error&reason=token_exchange_failed&error={str(e)}")
+            return RedirectResponse(url=f"{frontend_url}/dashboard?calendar=error&reason=token_exchange_failed&error={str(e)}")
         
         # Save credentials to database
         try:
             calendar_service.save_credentials(db, user_id, tokens)
         except Exception as e:
-            return RedirectResponse(url=f"http://localhost:5173/dashboard?calendar=error&reason=save_failed&error={str(e)}")
+            return RedirectResponse(url=f"{frontend_url}/dashboard?calendar=error&reason=save_failed&error={str(e)}")
         
         # Clean up session
         db.delete(oauth_state)
         db.commit()
         
         # Redirect to frontend with success message
-        return RedirectResponse(url="http://localhost:5173/dashboard?calendar=connected")
+        return RedirectResponse(url=f"{frontend_url}/dashboard?calendar=connected")
     except Exception as e:
         # Clean up session on error
         if state:
@@ -120,7 +123,7 @@ async def google_auth_callback(
                 db.delete(oauth_state)
                 db.commit()
         # Redirect to frontend with error message
-        return RedirectResponse(url=f"http://localhost:5173/dashboard?calendar=error&reason=callback_error&error={str(e)}")
+        return RedirectResponse(url=f"{frontend_url}/dashboard?calendar=error&reason=callback_error&error={str(e)}")
 
 @router.get("/calendars")
 async def list_calendars(
