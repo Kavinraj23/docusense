@@ -101,7 +101,9 @@ class GoogleCalendarService:
         if existing_creds:
             # Update existing credentials
             existing_creds.access_token = tokens["access_token"]
-            existing_creds.refresh_token = tokens["refresh_token"]
+            # Only update refresh_token if it's provided (not None)
+            if tokens.get("refresh_token"):
+                existing_creds.refresh_token = tokens["refresh_token"]
             existing_creds.token_expiry = tokens["token_expiry"]
             existing_creds.updated_at = datetime.utcnow()
             db.commit()
@@ -111,7 +113,7 @@ class GoogleCalendarService:
             creds = GoogleCalendarCredentials(
                 user_id=user_id,
                 access_token=tokens["access_token"],
-                refresh_token=tokens["refresh_token"],
+                refresh_token=tokens.get("refresh_token"),  # Can be None
                 token_expiry=tokens["token_expiry"]
             )
             db.add(creds)
@@ -138,8 +140,8 @@ class GoogleCalendarService:
             scopes=self.scopes
         )
         
-        # Refresh token if expired
-        if credentials.expired and credentials.refresh_token:
+        # Refresh token if expired and we have a refresh token
+        if credentials.expired and creds_record.refresh_token:
             try:
                 credentials.refresh(Request())
                 # Update stored tokens
@@ -148,6 +150,10 @@ class GoogleCalendarService:
                 creds_record.updated_at = datetime.utcnow()
                 db.commit()
             except Exception as e:
+                # If refresh fails and we have no refresh token, we need to re-authenticate
+                if not creds_record.refresh_token:
+                    return None
+                # For other refresh errors, also return None
                 return None
         
         return credentials

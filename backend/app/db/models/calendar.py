@@ -22,7 +22,7 @@ class GoogleCalendarCredentials(Base):
     
     # OAuth tokens
     access_token = Column(Text, nullable=False)
-    refresh_token = Column(Text, nullable=False)
+    refresh_token = Column(Text, nullable=True)  # Can be None for some OAuth flows
     token_expiry = Column(DateTime, nullable=True)
     
     # Calendar settings
