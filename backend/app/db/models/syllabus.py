@@ -40,8 +40,5 @@ class Syllabus(Base):
     grading_policy = Column(String, nullable=True)  # Stored as JSON object string
     schedule_summary = Column(Text, nullable=True)
 
-    # S3 file name
-    s3_file_name = Column(String, nullable=True)
-
     def __repr__(self):
         return f"<Syllabus(course_code={self.course_code}, course_name={self.course_name})>"
