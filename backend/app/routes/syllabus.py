@@ -166,6 +166,7 @@ async def upload_syllabus(
             user_id=current_user.id,
             filename=file.filename,
             content_type=file.content_type,
+            s3_file_key=s3_file_name,  # Store the full S3 key
             course_name=syllabus_info.get('title', file.filename),
             course_code=syllabus_info.get('course_code', ''),
             instructor_name=syllabus_info.get('instructor', {}).get('name', ''),
@@ -270,11 +271,11 @@ async def get_syllabus_file_url(
         raise HTTPException(status_code=404, detail="Syllabus not found")
     
     # Generate S3 signed URL for the file
-    # Generate S3 key from filename
-    s3_key = f"syllabi/{current_user.id}/{syllabus.filename}"
+    if not syllabus.s3_file_key:
+        raise HTTPException(status_code=404, detail="Syllabus file not found")
     
     try:
-        file_url = s3_service.get_file_url(s3_key)
+        file_url = s3_service.get_file_url(syllabus.s3_file_key)
         return {"file_url": file_url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get file URL: {str(e)}")
