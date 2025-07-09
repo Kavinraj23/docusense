@@ -1,0 +1,15 @@
+# Root-level ignores
+.DS_Store
+.vscode/
+*.log
+
+# Ignore all .env files anywhere as a fallback
+.env
+*.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# ipad reference md
+ipad-reference-guide.md
